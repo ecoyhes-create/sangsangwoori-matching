@@ -1,122 +1,104 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
 
-const PLACEHOLDER_MATCHES = [
-  { rank: 1, jobTitle: "사무 보조원", region: "서울", jobType: "사무·행정", score: 92, status: "추천" },
-  { rank: 2, jobTitle: "요양보호사 보조", region: "서울", jobType: "돌봄·요양", score: 85, status: "추천" },
-  { rank: 3, jobTitle: "방과후 교실 강사", region: "인천", jobType: "교육·강사", score: 78, status: "추천" },
-  { rank: 4, jobTitle: "편의점 계산원", region: "서울", jobType: "서비스·판매", score: 65, status: "검토 중" },
-  { rank: 5, jobTitle: "공장 품질검사", region: "경기", jobType: "기술·생산", score: 58, status: "검토 중" },
-];
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
 function ScoreBadge({ score }: { score: number }) {
-  const color =
-    score >= 80
-      ? "bg-green-100 text-green-800 border-green-300"
-      : score >= 65
-      ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-      : "bg-gray-100 text-gray-700 border-gray-300";
+  const cls =
+    score === 6
+      ? 'bg-yellow-100 text-yellow-800 border-yellow-400'
+      : score >= 4
+      ? 'bg-green-100 text-green-800 border-green-400'
+      : 'bg-gray-100 text-gray-700 border-gray-300'
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-lg font-bold border ${color}`}>
+    <span className={`inline-block px-4 py-1 rounded-full text-xl font-bold border-2 ${cls}`}>
       {score}점
     </span>
-  );
+  )
 }
 
-export default function RecommendationsPage() {
+export default async function RecommendationsPage({ searchParams }: { searchParams: SearchParams }) {
+  const { senior_id } = await searchParams
+
+  if (!senior_id || Array.isArray(senior_id)) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="rounded-xl bg-yellow-50 border-2 border-yellow-300 px-8 py-6 text-xl font-semibold text-yellow-800">
+          시니어 ID가 필요합니다. 담당자 대시보드에서 시니어를 선택해 주세요.
+        </div>
+      </main>
+    )
+  }
+
+  const seniorId = Number(senior_id)
+
+  const [{ data: senior }, { data: matchRows }] = await Promise.all([
+    supabase.from('seniors').select('name, region, desired_job').eq('id', seniorId).single(),
+    supabase
+      .from('matches')
+      .select('score, status, job_id')
+      .eq('senior_id', seniorId)
+      .order('score', { ascending: false }),
+  ])
+
+  const positiveMatches = (matchRows ?? []).filter((m) => m.score > 0)
+  const jobIds = positiveMatches.map((m) => m.job_id)
+
+  let jobMap: Record<number, { title: string; region: string; job_type: string }> = {}
+  if (jobIds.length > 0) {
+    const { data: jobs } = await supabase
+      .from('jobs')
+      .select('id, title, region, job_type')
+      .in('id', jobIds)
+    jobs?.forEach((j) => {
+      jobMap[j.id] = { title: j.title, region: j.region, job_type: j.job_type }
+    })
+  }
+
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* 헤더 */}
+    <main className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="max-w-3xl mx-auto space-y-6">
+
+        <Link href="/admin" className="inline-block text-base font-semibold text-blue-600 hover:underline">
+          ← 대시보드로 돌아가기
+        </Link>
+
         <div>
           <h1 className="text-4xl font-bold text-gray-900">맞춤 일자리 추천</h1>
-          <p className="text-xl text-gray-600 mt-2">
-            회원님의 프로필에 맞는 일자리를 점수 순으로 보여드립니다.
-          </p>
+          {senior && (
+            <p className="text-xl text-gray-600 mt-2">
+              {senior.name} · {senior.region} · {senior.desired_job}
+            </p>
+          )}
         </div>
 
-        {/* 요약 카드 */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="border-2 border-blue-200 bg-blue-50">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-lg text-blue-700 font-medium">추천 일자리</CardDescription>
-              <CardTitle className="text-4xl font-bold text-blue-900">—</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-2 border-green-200 bg-green-50">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-lg text-green-700 font-medium">최고 매칭 점수</CardDescription>
-              <CardTitle className="text-4xl font-bold text-green-900">—</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-2 border-yellow-200 bg-yellow-50">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-lg text-yellow-700 font-medium">검토 중</CardDescription>
-              <CardTitle className="text-4xl font-bold text-yellow-900">—</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* 추천 목록 테이블 */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-900">추천 목록 (플레이스홀더)</CardTitle>
-            <CardDescription className="text-base text-gray-500">
-              실제 데이터는 다음 단계에서 연결됩니다
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-100">
-                  <TableHead className="text-lg font-bold text-gray-700 w-16">순위</TableHead>
-                  <TableHead className="text-lg font-bold text-gray-700">일자리명</TableHead>
-                  <TableHead className="text-lg font-bold text-gray-700">지역</TableHead>
-                  <TableHead className="text-lg font-bold text-gray-700">직종</TableHead>
-                  <TableHead className="text-lg font-bold text-gray-700 text-center">점수</TableHead>
-                  <TableHead className="text-lg font-bold text-gray-700 text-center">상태</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {PLACEHOLDER_MATCHES.map((match) => (
-                  <TableRow key={match.rank} className="hover:bg-gray-50">
-                    <TableCell className="text-xl font-bold text-blue-600">{match.rank}</TableCell>
-                    <TableCell className="text-xl font-semibold text-gray-900">{match.jobTitle}</TableCell>
-                    <TableCell className="text-lg text-gray-700">{match.region}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-base px-3 py-1">
-                        {match.jobType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <ScoreBadge score={match.score} />
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        className={`text-base px-3 py-1 ${
-                          match.status === "추천"
-                            ? "bg-green-600 text-white"
-                            : "bg-gray-400 text-white"
-                        }`}
-                      >
-                        {match.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        {positiveMatches.length === 0 ? (
+          <div className="rounded-xl bg-gray-100 border-2 border-gray-300 px-6 py-6 text-xl font-semibold text-gray-600">
+            현재 매칭되는 일자리가 없습니다
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {positiveMatches.map((m) => {
+              const job = jobMap[m.job_id]
+              if (!job) return null
+              return (
+                <div
+                  key={m.job_id}
+                  className="bg-white rounded-2xl border-2 border-gray-200 shadow-sm px-6 py-5 flex items-center justify-between gap-4"
+                >
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold text-gray-900">{job.title}</p>
+                    <p className="text-lg text-gray-600">
+                      {job.region} · {job.job_type}
+                    </p>
+                  </div>
+                  <ScoreBadge score={m.score} />
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </main>
-  );
+  )
 }
