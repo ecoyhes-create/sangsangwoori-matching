@@ -47,9 +47,11 @@ export default function Home() {
                 <CardDescription className="text-base text-gray-600">{page.description}</CardDescription>
               </CardHeader>
               <div className="px-6 pb-6">
-                <Button asChild className="w-full h-12 text-lg font-semibold" variant="outline">
-                  <Link href={page.href}>{page.buttonLabel}</Link>
-                </Button>
+                <Link href={page.href} className="block w-full">
+                  <Button className="w-full h-12 text-lg font-semibold" variant="outline">
+                    {page.buttonLabel}
+                  </Button>
+                </Link>
               </div>
             </Card>
           ))}
