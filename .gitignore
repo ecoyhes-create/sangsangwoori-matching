@@ -44,3 +44,10 @@ next-env.d.ts
 .claude/
 .playwright-mcp/
 screenshot-*.png
+
+# playwright test output
+/test-results/
+/playwright-report/
+
+# supabase local dev
+supabase/.temp/
