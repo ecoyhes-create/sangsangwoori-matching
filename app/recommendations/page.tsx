@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { assignJob } from '@/app/actions'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -92,7 +93,23 @@ export default async function RecommendationsPage({ searchParams }: { searchPara
                       {job.region} · {job.job_type}
                     </p>
                   </div>
-                  <ScoreBadge score={m.score} />
+                  <div className="flex items-center gap-3 shrink-0">
+                    <ScoreBadge score={m.score} />
+                    {m.status === 'assigned' ? (
+                      <span className="inline-block px-4 py-1 rounded-full text-base font-bold border-2 bg-green-100 text-green-800 border-green-400">
+                        배정 완료
+                      </span>
+                    ) : (
+                      <form action={assignJob.bind(null, { senior_id: seniorId, job_id: m.job_id })}>
+                        <button
+                          type="submit"
+                          className="inline-flex items-center justify-center h-10 px-5 rounded-lg border-2 border-blue-400 bg-blue-50 text-blue-700 text-base font-semibold hover:bg-blue-100 transition-colors"
+                        >
+                          배정하기
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </div>
               )
             })}

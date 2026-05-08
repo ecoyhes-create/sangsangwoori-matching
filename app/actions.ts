@@ -102,6 +102,23 @@ export async function insertJob(data: {
   return { success: true }
 }
 
+export async function assignJob(data: {
+  senior_id: number
+  job_id: number
+}): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('matches')
+    .update({ status: 'assigned' })
+    .eq('senior_id', data.senior_id)
+    .eq('job_id', data.job_id)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin')
+  revalidatePath('/recommendations')
+  return { success: true }
+}
+
 export async function deleteJob(jobId: number): Promise<{ success: boolean; error?: string }> {
   const { error: matchError } = await supabase.from('matches').delete().eq('job_id', jobId)
   if (matchError) return { success: false, error: matchError.message }

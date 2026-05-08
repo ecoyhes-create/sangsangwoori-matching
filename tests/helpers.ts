@@ -20,11 +20,15 @@ export const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
-/** 테스트 전 전체 데이터 초기화 (matches → seniors → jobs 순서) */
+// CI: 전체 삭제 / 로컬: 이 세션 이후 생성된 데이터만 삭제 (시연 데이터 보호)
+const TEST_SESSION_START = new Date().toISOString()
+
+/** 테스트 전 데이터 초기화 (matches → seniors → jobs 순서) */
 export async function resetDb() {
-  await db.from('matches').delete().gte('created_at', '2000-01-01')
-  await db.from('seniors').delete().gte('created_at', '2000-01-01')
-  await db.from('jobs').delete().gte('created_at', '2000-01-01')
+  const since = process.env.CI ? '2000-01-01' : TEST_SESSION_START
+  await db.from('matches').delete().gte('created_at', since)
+  await db.from('seniors').delete().gte('created_at', since)
+  await db.from('jobs').delete().gte('created_at', since)
 }
 
 export async function seedJob(data: {

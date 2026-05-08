@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { calcScore } from './matching.mjs'
 
 // .env.local 로드
 const envPath = join(process.cwd(), '.env.local')
@@ -43,14 +44,6 @@ const jobs = [
   { title: '방문 돌봄 도우미',        region: '경기',       job_type: '돌봄', required_years: 6  },
   { title: '주차 관리원',             region: '서울',       job_type: '경비', required_years: 1  },
 ]
-
-function calcScore(senior, job) {
-  let score = 0
-  if (senior.region === job.region) score += 3
-  if (senior.desired_job === job.job_type) score += 2
-  if (senior.career_years >= job.required_years) score += 1
-  return score
-}
 
 async function main() {
   console.log('=== seniors INSERT ===')
