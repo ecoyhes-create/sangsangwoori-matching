@@ -6,10 +6,25 @@ import { supabase } from '@/lib/supabase'
 type Senior = { region: string; desired_job: string; career_years: number }
 type Job = { region: string; job_type: string; required_years: number }
 
+const REGION_MAP: Record<string, string> = {
+  '서울특별시': '서울',
+  '경기도': '경기',
+  '인천광역시': '인천',
+}
+const JOB_MAP: Record<string, string> = {
+  '경비직': '경비',
+  '청소직': '청소',
+  '조리직': '조리',
+  '돌봄직': '돌봄',
+}
+
+function normalizeRegion(v: string) { return REGION_MAP[v] ?? v }
+function normalizeJob(v: string) { return JOB_MAP[v] ?? v }
+
 function calcScore(senior: Senior, job: Job): number {
   let score = 0
-  if (senior.region === job.region) score += 3
-  if (senior.desired_job === job.job_type) score += 2
+  if (normalizeRegion(senior.region) === normalizeRegion(job.region)) score += 3
+  if (normalizeJob(senior.desired_job) === normalizeJob(job.job_type)) score += 2
   if ((senior.career_years ?? 0) >= (job.required_years ?? 0)) score += 1
   return score
 }
