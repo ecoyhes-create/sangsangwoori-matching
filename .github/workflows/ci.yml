@@ -24,6 +24,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Check secrets
+        run: |
+          echo "SUPABASE_URL set: $([ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && echo YES || echo NO)"
+          echo "SUPABASE_KEY set: $([ -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && echo YES || echo NO)"
+
       - name: Install dependencies
         run: npm ci
 
